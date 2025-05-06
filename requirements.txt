@@ -1,0 +1,4 @@
+Flask==3.1.0
+Flask-SQLAlchemy==3.1.1
+mysql-connector-python==8.1.0  # Recommended for Render
+gunicorn==23.0.0

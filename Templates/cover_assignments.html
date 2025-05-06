@@ -1,0 +1,55 @@
+{% extends "template.html" %}
+
+{% block title %}Cover Assignments{% endblock %}
+
+{% block header %}
+<form method="POST" action="/mark_absent">
+  <div class="d-flex justify-content-between align-items-center flex-wrap">
+    
+    <div>
+        <label for="absence_date" class="form-label small text-muted mb-1">Date:</label>
+      <input type="date" id="absence_date" name="absence_date" class="form-control" style="min-width: 180px;" required value="{{ current_date }}">
+    </div>
+
+    <div>
+        <label for="week" class="form-label small text-muted mb-1">Week:</label>
+        <select name="week" id="week" class="form-select form-select-sm" style="min-width: 100px; font-size: 1rem; height: auto;" required>
+            <option value="A">A</option>
+            <option value="B">B</option>
+        </select>
+    </div>
+
+    <div class="d-flex align-items-center">
+      <label for="ignore_exam_years" class="form-label small text-muted mb-0 me-2">Exam Season</label>
+      <input class="form-check-input" type="checkbox" name="exam_period" id="ignore_exam_years" value="yes">
+    </div>
+
+    <div>
+      <button type="submit" class="btn btn-success mb-1">Confirm</button>
+    </div>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <table class="table table-bordered table-hover">
+      <thead>
+          <tr>
+              <th>Teacher Code</th>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Absent</th>
+          </tr>
+      </thead>
+      <tbody>
+          {% for row in teachers %}
+          <tr>
+              <td>{{ row.TeacherCode }}</td>
+              <td>{{ row.FirstName }}</td>
+              <td>{{ row.LastName }}</td>
+              <td><input type="checkbox" name="selected_teachers" value="{{ row.TeacherCode }}"></td>
+          </tr>
+          {% endfor %}
+      </tbody>
+  </table>
+</form>
+{% endblock %}

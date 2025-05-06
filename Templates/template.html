@@ -1,0 +1,50 @@
+<!-- templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Teacher Cover App{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+        table th {
+            background-color: #2fccd6;
+            color: white;
+            text-align: center;
+            
+        }
+
+        table td {
+            text-align: center;
+            
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>{% block header %}Teacher Cover App{% endblock %}</h1>
+    
+    {% block content %}
+    <!-- Page-specific content goes here -->
+    {% endblock %}
+</div>
+
+</body>
+</html>

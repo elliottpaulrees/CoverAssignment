@@ -1,0 +1,46 @@
+{% extends "template.html" %}
+
+{% block title %}Cover Assignments{% endblock %}
+
+{% block content %}
+  <table class="table table-bordered table-hover">
+      <thead>
+          <tr>
+              <th>Absent Teacher</th>
+              <th>Lesson</th>
+              <th>Period</th>
+              <th>Class</th>
+              <th>Room</th>
+              <th>Cover Teacher(s)</th>
+          </tr>
+      </thead>
+      <tbody>
+          {% for lesson, cover_teachers in coverSuggestions %}
+              <tr>
+                  <td>
+                      {% for t in teachers %}
+                          {% if t.TeacherCode == lesson.TeacherCode %}
+                              {{ t.FirstName }} {{ t.LastName }}
+                          {% endif %}
+                      {% endfor %}
+                  </td>
+                  <td>{{ lesson.Subject }}</td>
+                  <td>{{ lesson.Period }}</td>
+                  <td>{{ lesson.Class }}</td>
+                  <td>
+                      <input type="text" name="room_{{ lesson.LessonID }}" value="{{ lesson.Room }}" class="form-control" />
+                  </td>
+                  <td>
+                      <select name="cover_teacher_{{ lesson.LessonID }}" class="form-control">
+                          {% for cover_teacher in cover_teachers %}
+                              <option value="{{ cover_teacher.TeacherCode }}">
+                                  {{ cover_teacher.FirstName }} {{ cover_teacher.LastName }}
+                              </option>
+                          {% endfor %}
+                      </select>
+                  </td>
+              </tr>
+          {% endfor %}
+      </tbody>
+  </table>
+{% endblock %}

@@ -105,7 +105,7 @@ def mark_absent():
 
     date_obj = datetime.strptime(selected_date, "%Y-%m-%d")
     day_of_week = date_obj.strftime("%A")
-    assigned_teachers_today = set()
+    assigned_teachers_today = set()  # Track teachers already first assigned today
 
     LessonModel = lessonsWeekA if week == 'A' else lessonsWeekB
 
@@ -128,14 +128,27 @@ def mark_absent():
 
     for lesson in lessons:
         free_periods = getCoverTeachers(day_of_week, lesson, week, exam_period, selected_teachers, assigned_teachers_today)
-        sorted_teachers = sort_teachers_by_availability(free_periods)
 
-        if sorted_teachers:
-            assigned_teacher = sorted_teachers[0]
-            assigned_teachers_today.add(assigned_teacher.TeacherCode)
-            reordered_teachers = [assigned_teacher] + [t for t in sorted_teachers if t.TeacherCode != assigned_teacher.TeacherCode]
-        else:
+        if not free_periods:
             reordered_teachers = []
+        else:
+            # Find first teacher not already assigned as first for another lesson
+            assigned_teacher = None
+            for t in free_periods:
+                if t.TeacherCode not in assigned_teachers_today:
+                    assigned_teacher = t
+                    break
+
+            # If all are assigned, fallback to first teacher anyway
+            if assigned_teacher is None:
+                assigned_teacher = free_periods[0]
+
+            # Mark teacher as assigned first only if not already in set
+            if assigned_teacher.TeacherCode not in assigned_teachers_today:
+                assigned_teachers_today.add(assigned_teacher.TeacherCode)
+
+            # Put assigned teacher first, then the rest (excluding assigned_teacher)
+            reordered_teachers = [assigned_teacher] + [t for t in free_periods if t.TeacherCode != assigned_teacher.TeacherCode]
 
         coverSuggestions.append((lesson, reordered_teachers))
 
@@ -165,41 +178,41 @@ def sort_teachers_by_availability(teachers):
 def getCoverTeachers(day_of_week, lesson, week, exam_period, absent_teachers, already_assigned_today):
     LessonModel = lessonsWeekA if week == 'A' else lessonsWeekB
 
-    rota_teacher_codes = [r.TeacherCode for r in coverrota.query.filter_by(
+    # Step 1: Get all teacher codes
+    all_teacher_codes = {t.TeacherCode for t in app.teachers}
+
+    # Step 2: Find busy teachers (those with non-'free' lessons at this day/period)
+    busy_teacher_rows = LessonModel.query.filter(
+        LessonModel.Day == day_of_week,
+        LessonModel.Period == lesson.Period,
+        LessonModel.Class != 'free'
+    ).with_entities(LessonModel.TeacherCode).all()
+    busy_teacher_codes = {row[0] for row in busy_teacher_rows}
+
+    # Step 3: Compute free teachers = all - busy - absent
+    free_teacher_codes = all_teacher_codes - busy_teacher_codes - set(absent_teachers)
+
+    # Step 4: Get teachers listed in coverrota for this period (priority group)
+    rota_teacher_rows = coverrota.query.filter_by(
         Day=day_of_week, Period=lesson.Period, Week=week
-    ).all()]
+    ).with_entities(coverrota.TeacherCode).all()
+    rota_teacher_codes = {row[0] for row in rota_teacher_rows}
 
-    free_periods = LessonModel.query.filter_by(
-        Day=day_of_week, Period=lesson.Period
-    ).all()
+    # Step 5: Build list of all free teacher objects
+    free_teachers = [t for t in app.teachers if t.TeacherCode in free_teacher_codes]
 
-    free_teacher_codes = [
-        l.TeacherCode for l in free_periods
-        if (
-            l.Class == "free" or
-            (exam_period == "yes" and ("Y11" in l.Class or "Y13" in l.Class))
-        ) and l.TeacherCode not in absent_teachers
-    ]
+    # Step 6: Sort free teachers with rota teachers first, then others, 
+    # each group sorted by score_teacher()
+    def sort_key(t):
+        return (
+            0 if t.TeacherCode in rota_teacher_codes else 1,  # rota first
+            score_teacher(t)  # then by workload + cover count
+        )
 
-    eligible_rota_teachers = [
-        t for t in app.teachers
-        if t.TeacherCode in rota_teacher_codes and t.TeacherCode in free_teacher_codes and t.TeacherCode not in already_assigned_today
-    ]
+    free_teachers.sort(key=sort_key)
 
-    eligible_other_teachers = [
-        t for t in app.teachers
-        if t.TeacherCode not in rota_teacher_codes and t.TeacherCode in free_teacher_codes and t.TeacherCode not in already_assigned_today
-    ]
-
-    def penalize_if_assigned(t):
-        return score_teacher(t) + (0.5 if t.TeacherCode in already_assigned_today else 0)
-
-    eligible_rota_teachers.sort(key=penalize_if_assigned)
-    eligible_other_teachers.sort(key=penalize_if_assigned)
-
-    return eligible_rota_teachers or eligible_other_teachers
-
-# ---------------------------
+    # Step 7: Return all free teachers sorted as above (do NOT filter by already_assigned_today here)
+    return free_teachers
 # Teardown to release DB connections
 # ---------------------------
 @app.teardown_appcontext
